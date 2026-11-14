@@ -1,0 +1,32 @@
+# icue-msi-argb configuration. Copy to C:\ProgramData\icue-msi-shim\config.txt (the installer does this
+# the first time). After editing, close iCUE completely and open it again. Lines starting with # are ignored.
+#
+# Each JARGB_V2 header is addressed as area 4|0, 4|1 or 4|2 (JARGB_V2_1 / _2 / _3). 8|0 is the JAF header.
+#
+# PER-LED (recommended) - the header becomes part of the motherboard's "Lighting Channel" in iCUE:
+#   channel=<label>|<area hi>|<area lo>|<physical LEDs>|<LEDs in the iCUE channel>[|1 = reverse direction]
+#   Channels are laid out in the order written here. In iCUE > motherboard > Lighting Setup pick
+#   "External RGB Light Strips" and add strips whose LED counts add up the same way, in the same order
+#   (250mm = 15, 350mm = 21, 450mm = 27, 1.4M = 84). The physical and iCUE counts may differ; the
+#   colours are scaled. Total channel LEDs: up to 100, or up to 160 with keysplit=1.
+#
+# ONE COLOUR PER HEADER (always fluid) - shows up as a zone in "MOTHERBOARD LIGHTING":
+#   zone=<name>|<area hi>|<area lo>|<physical LEDs>
+#   One zone name must contain JCORSAIR, otherwise the iCUE plugin ignores the board.
+#
+# Example (the author's PC): water cooler ring, GPU and case strips.
+channel=Water Cooler|4|1|12|15
+channel=GPU|4|2|29|15
+channel=Case|4|0|47|84|1
+#
+# Name shown in iCUE.
+dev=MSI Motherboard
+# Controller serial prefix that is allowed to be driven (MS-7E51 = MAG X870 TOMAHAWK WIFI).
+# Leave empty (board=) to accept any MSI 0DB0:0076 controller - untested on other boards.
+board=7E51
+# 1 = allow more than 100 channel LEDs (patches the plugin in memory; only for CueMsiPlugin 2.2.0).
+keysplit=1
+# 0 = do not touch the controller at all (iCUE shows the board but nothing lights up).
+direct=1
+# 1 = verbose log in C:\ProgramData\icue-msi-shim\shim.log
+debug=0
