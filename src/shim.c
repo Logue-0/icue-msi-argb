@@ -123,6 +123,7 @@ static DWORD map_px(const DWORD* c, int cl, int n, int k) { if (cl == n) return 
   if (cl < n) { int j = ((2*k + 1) * cl) / (2*n); return c[j < cl ? j : cl - 1]; }
   int s = (k * cl) / n, e = ((k + 1) * cl + n - 1) / n; if (e > cl) e = cl; if (e <= s) e = s + 1; unsigned r = 0, g = 0, b = 0;
   for (int j = s; j < e; j++) { r += (c[j] >> 16) & 255; g += (c[j] >> 8) & 255; b += c[j] & 255; } int m = e - s; return ((r / m) << 16) | ((g / m) << 8) | (b / m); }
+static ULONGLONG g_lastg2;
 static DWORD WINAPI worker(LPVOID p) { LARGE_INTEGER fq, t0, t1; QueryPerformanceFrequency(&fq); st_t0 = GetTickCount64(); st_calls = st_sends = st_changes = 0; st_sum = st_max = 0; ULONGLONG lastsend = 0; static DWORD ch[8][240], px[8][240]; int rr = 0; LONG st_fr = 0;
   while (WaitForSingleObject(g_stop, 0) == WAIT_TIMEOUT) { ULONGLONG now = GetTickCount64(); int want[8], nm[8]; int changed = 0, any = 0, did = 0;
     EnterCriticalSection(&g_zcs); for (int i = 0; i < g_nz; i++) { want[i] = g_z[i].want; if (want[i]) memcpy(ch[i], g_z[i].ch, sizeof(DWORD) * (g_z[i].cl ? g_z[i].cl : 1)); } LeaveCriticalSection(&g_zcs);
@@ -138,6 +139,8 @@ static DWORD WINAPI worker(LPVOID p) { LARGE_INTEGER fq, t0, t1; QueryPerformanc
       st_sum += ms; if (ms > st_max) st_max = ms; st_sends++; if (changed) st_changes++; lastsend = now; did = 1; }
     for (int q = 0; q < g_nz; q++) { int i = (rr + q) % g_nz; ZONE* z = &g_z[i]; if (!want[i] || !z->have || z->mode != 9) continue; int due = z->refresh_at && now >= z->refresh_at;
       if (z->dirty || due || memcmp(px[i], z->lastpx, sizeof(DWORD) * z->n) || now - z->frame_t > 10000) { if (send_px(z, px[i])) { memcpy(z->lastpx, px[i], sizeof(DWORD) * z->n); z->dirty = 0; if (due) z->refresh_at = 0; z->frame_t = now; st_fr++; st_changes++; } else Sleep(20); rr = i + 1; did = 1; break; } }
+    if (now - g_lastg2 > 3000) { /* MSI Center (LEDKeeper2) may switch ARGB Gen2 back on, after which the header ignores our colours: re-assert Gen2 off every 3 s */
+      g_lastg2 = now; HANDLE mx = take_mutex(); for (int q = 0; q < g_nz; q++) if (g_z[q].hi == 4 && g_z[q].lo <= 3) hid_cmd(0x84, g_z[q].lo, 0, NULL); drop_mutex(mx); }
     if (!did) Sleep(2);
     if (now - st_t0 >= 5000) { double s = (double)(now - st_t0) / 1000.0; if (g_debug && st_changes > 3) logw(L"stats: plugin frames %.1f/s, board packets %.1f/s (avg %.1f ms, max %.1f ms), per-LED frames %.1f/s", st_calls / s, st_sends / s, st_sends ? st_sum / st_sends : 0.0, st_max, st_fr / s); st_calls = st_sends = st_changes = 0; st_fr = 0; st_sum = st_max = 0; st_t0 = now; } }
   return 0; }
@@ -160,6 +163,6 @@ static int call(const char* name, U* a) { ensure(); if (!g_real) return -3;
   if (strncmp(name, "MLAPI_Get", 9)) logw(L"sdk: %hs => %d", name, r); return r; }
 #define P(name) __declspec(dllexport) int name(U a,U b,U c,U d,U e,U f,U g,U h){ U v[8]={a,b,c,d,e,f,g,h}; return call(#name, v); }
 P(MLAPI_Initialize) P(MLAPI_Release) P(MLAPI_GetDeviceInfo) P(MLAPI_GetDeviceName) P(MLAPI_GetDeviceNameEx) P(MLAPI_GetErrorMessage) P(MLAPI_GetLedName) P(MLAPI_GetLedInfo) P(MLAPI_GetLedColor) P(MLAPI_GetLedStyle) P(MLAPI_GetLedMaxBright) P(MLAPI_GetLedBright) P(MLAPI_GetLedMaxSpeed) P(MLAPI_GetLedSpeed) P(MLAPI_SetLedColor) P(MLAPI_SetLedStyle) P(MLAPI_SetLedBright) P(MLAPI_SetLedSpeed) P(MLAPI_SetLedColorEx) P(MLAPI_SetLedColors) P(MLAPI_SetLedColorSync) P(MLAPI_SetLedColorsSync) P(MLAPI_MysticLightControlNotify)
-BOOL WINAPI DllMain(HINSTANCE h, DWORD reason, LPVOID r) { if (reason == DLL_PROCESS_ATTACH) { g_self = h; InitializeCriticalSection(&g_cs); InitializeCriticalSection(&g_dcs); InitializeCriticalSection(&g_zcs); DisableThreadLibraryCalls(h); CreateDirectoryW(DIRW, NULL); { WIN32_FILE_ATTRIBUTE_DATA fa; if (GetFileAttributesExW(DIRW L"\\shim.log", GetFileExInfoStandard, &fa) && (fa.nFileSizeHigh || fa.nFileSizeLow > 1048576)) MoveFileExW(DIRW L"\\shim.log", DIRW L"\\shim.old.log", MOVEFILE_REPLACE_EXISTING); } logw(L"==== icue-msi-argb 1.0 attached"); } return TRUE; }
+BOOL WINAPI DllMain(HINSTANCE h, DWORD reason, LPVOID r) { if (reason == DLL_PROCESS_ATTACH) { g_self = h; InitializeCriticalSection(&g_cs); InitializeCriticalSection(&g_dcs); InitializeCriticalSection(&g_zcs); DisableThreadLibraryCalls(h); CreateDirectoryW(DIRW, NULL); { WIN32_FILE_ATTRIBUTE_DATA fa; if (GetFileAttributesExW(DIRW L"\\shim.log", GetFileExInfoStandard, &fa) && (fa.nFileSizeHigh || fa.nFileSizeLow > 1048576)) MoveFileExW(DIRW L"\\shim.log", DIRW L"\\shim.old.log", MOVEFILE_REPLACE_EXISTING); } logw(L"==== icue-msi-argb 1.0.1 attached"); } return TRUE; }
 
 

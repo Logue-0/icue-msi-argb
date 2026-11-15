@@ -52,7 +52,7 @@ See `config.example.txt`. In short:
 
 - Every channel LED also appears as a "JCORSAIR nnn" button under MOTHERBOARD LIGHTING. It is cosmetic; leave that section without layers.
 - The two Lian Li strips on one header are wired in parallel, so they always mirror each other (a hardware limit).
-- Gen2 ARGB devices are switched to Gen1 mode while iCUE drives them, and switched back on exit.
+- Gen2 ARGB devices are switched to Gen1 mode while iCUE drives them, and switched back on exit. MSI Center can switch Gen2 back on at any time; the proxy re-asserts Gen1 every 3 s, so a Gen2 device may go dark for up to 3 s.
 
 ## How it works (short)
 
