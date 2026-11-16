@@ -47,6 +47,7 @@ See `config.example.txt`. In short:
 | `board=7E51` | Controller serial prefix allowed (empty = any; untested) |
 | `keysplit=1` | Allow up to 160 channel LEDs |
 | `debug=1` | Verbose log in `C:\ProgramData\icue-msi-shim\shim.log` |
+| `keepalive=`, `gen2check=`, `blackoff=` | Advanced timing / black handling, see the example config |
 
 ## Known issues
 

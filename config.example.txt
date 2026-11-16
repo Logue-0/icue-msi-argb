@@ -30,3 +30,10 @@ keysplit=1
 direct=1
 # 1 = verbose log in C:\ProgramData\icue-msi-shim\shim.log
 debug=0
+# Advanced (defaults shown):
+# re-send the board packet every N ms even if nothing changed (0 = never)
+#keepalive=2000
+# re-assert ARGB Gen2 off every N ms on headers with a Gen2 device, because MSI Center can turn it back on (0 = never)
+#gen2check=3000
+# 1 = an all-black header uses the board's Off mode instead of a black Steady colour (avoids white flashes)
+#blackoff=1
